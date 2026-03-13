@@ -2211,9 +2211,9 @@ btnEl.addEventListener('click', () => {
         theme.play().then(() => {
           let v = 0;
           const fi = setInterval(() => {
-            v = Math.min(v + 0.05, 1);
+            v = Math.min(v + 0.005, 0.1);
             theme.volume = v;
-            if (v >= 1) clearInterval(fi);
+            if (v >= 0.1) clearInterval(fi);
           }, 80);
         }).catch(() => {});
       }
