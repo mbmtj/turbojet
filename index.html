@@ -2190,13 +2190,40 @@ btnEl.addEventListener('click', () => {
     'CALIBRATING SYSTEMS...','SYNCING COMMS...','READY'
   ];
 
+  // Minimum display time: 10 seconds
+  const MIN_DISPLAY_MS = 10000;
+  const startTime = Date.now();
+  let assetsReady = false;
+
+  // Animate the progress bar smoothly over 10 seconds regardless of actual load speed
+  const ANIM_DURATION = 9400; // ms to reach ~97%, final snap to 100% on dismiss
+  let animStart = null;
+  function animateBar(ts) {
+    if (!animStart) animStart = ts;
+    const elapsed = ts - animStart;
+    const fakeProgress = Math.min(elapsed / ANIM_DURATION, 0.97);
+    const pct = Math.floor(fakeProgress * 100);
+    bar.style.width = pct + '%';
+    const idx = Math.min(Math.floor(fakeProgress / (1 / (MSGS.length - 1))), MSGS.length - 2);
+    status.textContent = MSGS[idx];
+    if (elapsed < ANIM_DURATION) {
+      requestAnimationFrame(animateBar);
+    }
+  }
+  requestAnimationFrame(animateBar);
+
   function onProgress() {
     loaded++;
-    const pct = Math.floor((loaded / TOTAL) * 100);
-    bar.style.width = pct + '%';
-    const idx = Math.min(Math.floor(pct / (100 / (MSGS.length - 1))), MSGS.length - 2);
-    status.textContent = MSGS[idx];
-    if (loaded >= TOTAL) dismiss();
+    if (loaded >= TOTAL) {
+      assetsReady = true;
+      tryDismiss();
+    }
+  }
+
+  function tryDismiss() {
+    const elapsed = Date.now() - startTime;
+    const remaining = MIN_DISPLAY_MS - elapsed;
+    setTimeout(dismiss, Math.max(0, remaining));
   }
 
   function dismiss() {
@@ -2235,7 +2262,7 @@ btnEl.addEventListener('click', () => {
     a.load();
   });
 
-  // Hard fallback 12s
+  // Hard fallback: dismiss at 12s no matter what
   setTimeout(dismiss, 12000);
 
   // ── Canvas 2D flythrough animation ──
