@@ -1073,12 +1073,121 @@ footer.hud-footer {
   width: 0;
   height: 0;
 }
+
+/* =============================================
+   LOADING SCREEN
+============================================= */
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.9s ease, visibility 0.9s ease;
+}
+#loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#loader-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.loader-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.loader-logo {
+  width: 72px;
+  height: 72px;
+  border: 2px solid #FFD700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: lSpin 4s linear infinite;
+  box-shadow: 0 0 20px rgba(255,215,0,0.5), inset 0 0 20px rgba(255,215,0,0.05);
+}
+.loader-logo::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(0,255,255,0.5);
+  animation: lSpinR 3s linear infinite;
+}
+.loader-logo::after {
+  content: '';
+  position: absolute;
+  width: 8px; height: 8px;
+  background: #FFD700;
+  box-shadow: 0 0 10px #FFD700;
+}
+@keyframes lSpin  { to { transform: rotate(360deg);  } }
+@keyframes lSpinR { to { transform: rotate(-360deg); } }
+.loader-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.9);
+}
+.loader-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: rgba(0,255,255,0.7);
+}
+.loader-bar-wrap {
+  width: 220px;
+  height: 2px;
+  background: rgba(255,215,0,0.15);
+  overflow: hidden;
+}
+.loader-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FFD700, #00ffff);
+  box-shadow: 0 0 8px #FFD700;
+  transition: width 0.15s linear;
+}
+.loader-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(255,215,0,0.55);
+  min-height: 14px;
+}
 </style>
 
 <title>Turbo Jet: Mashmak Covert-OPS</title>
 
 </head>
 <body>
+
+<div id="loader">
+  <canvas id="loader-canvas"></canvas>
+  <div class="loader-content">
+    <div class="loader-logo"></div>
+    <div class="loader-title">TURBO JET</div>
+    <div class="loader-sub">COVERT-OPS // MASHMAK</div>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar" id="loader-bar"></div>
+    </div>
+    <div class="loader-status" id="loader-status">INITIALIZING...</div>
+  </div>
+</div>
 
 
 <div id="app">
@@ -2041,6 +2150,254 @@ btnEl.addEventListener('click', () => {
         btnEl.style.opacity = "1";
     }
 });
+</script>
+
+
+<script>
+(function(){
+  const IMAGES = [
+    'img/Logo-Turbojet.webp','img/map.webp','img/Codered.webp',
+    'img/ultimate.webp','img/bluerz.webp','img/purplerz.webp',
+    'img/goldrz.webp','img/goldbox.webp','img/cextrators.webp',
+    'img/frigates.webp','img/lsplitters.webp','img/drillers.webp',
+    'img/makalu.webp','img/constatine.webp','img/eship.webp',
+    'img/profitablefarmarea.webp','img/Exit.webp','img/cargo.webp',
+    'img/repairhub.webp','img/thirdgens.webp','img/tank.webp','img/corite.webp',
+    'research/extractionbeacons.gif','research/gliders.gif',
+    'research/reconbeacons.gif','research/decoy.gif','research/repairstations.gif',
+    'research/matrixcredit.webp',
+    'striker/Alphard.webp','striker/ALYSSNES.webp','striker/AQUILLA.webp',
+    'striker/FALCON.webp','striker/FREYR.webp','striker/HELL.webp',
+    'striker/HURRICANE.webp','striker/INFERNO.webp','striker/LUMINAE.webp',
+    'striker/MIKI.webp','striker/NARUKAMI.webp','striker/Norne.webp',
+    'striker/PANTHER.webp','striker/PINAKA.webp','striker/SERENITH.webp',
+    'striker/SKYRAIDER.webp','striker/STEGO.webp','striker/STELLARUS.webp',
+    'striker/TRICERA.webp','striker/WELKIN.webp',
+    'verge/babylonskyfortress.webp','verge/capeblancobserbatory.webp',
+    'verge/eyeofmisra.webp','verge/gracelynnskycity.webp',
+    'verge/kraubsinkhole.webp','verge/longmenlaunchsite.webp',
+    'verge/palmbayharbor.webp','verge/poseidonarmory.webp',
+    'verge/stellaobserbatoryisle.webp','verge/vigilimbrium.webp'
+  ];
+  const AUDIO = ['mp3/guide.mp3','mp3/theme.mp3'];
+  const TOTAL = IMAGES.length + AUDIO.length;
+  let loaded = 0;
+  const bar    = document.getElementById('loader-bar');
+  const status = document.getElementById('loader-status');
+  const MSGS = [
+    'INITIALIZING...','LOADING ASSETS...','LOADING MAP DATA...',
+    'LOADING STRIKER DATABASE...','LOADING INTEL...',
+    'CALIBRATING SYSTEMS...','SYNCING COMMS...','READY'
+  ];
+
+  function onProgress() {
+    loaded++;
+    const pct = Math.floor((loaded / TOTAL) * 100);
+    bar.style.width = pct + '%';
+    const idx = Math.min(Math.floor(pct / (100 / (MSGS.length - 1))), MSGS.length - 2);
+    status.textContent = MSGS[idx];
+    if (loaded >= TOTAL) dismiss();
+  }
+
+  function dismiss() {
+    bar.style.width = '100%';
+    status.textContent = 'READY';
+    setTimeout(() => {
+      document.getElementById('loader').classList.add('hidden');
+      // Auto-play theme music with fade-in
+      const theme = document.getElementById('myAudio');
+      if (theme) {
+        theme.volume = 0;
+        theme.play().then(() => {
+          let v = 0;
+          const fi = setInterval(() => {
+            v = Math.min(v + 0.05, 1);
+            theme.volume = v;
+            if (v >= 1) clearInterval(fi);
+          }, 80);
+        }).catch(() => {});
+      }
+    }, 600);
+  }
+
+  // Preload all images
+  IMAGES.forEach(src => {
+    const img = new Image();
+    img.onload = img.onerror = onProgress;
+    img.src = src;
+  });
+
+  // Preload audio
+  AUDIO.forEach(src => {
+    const a = new Audio();
+    a.oncanplaythrough = a.onerror = onProgress;
+    a.src = src;
+    a.load();
+  });
+
+  // Hard fallback 12s
+  setTimeout(dismiss, 12000);
+
+  // ── Canvas 2D flythrough animation ──
+  const cv = document.getElementById('loader-canvas');
+  const cx = cv.getContext('2d');
+  let W, H, t = 0;
+
+  function resize() {
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Perspective grid lines
+  const VP = { x: 0.5, y: 0.5 }; // vanishing point (fraction)
+  function project(gx, gy, depth) {
+    const vx = W * VP.x, vy = H * VP.y;
+    const scale = 1 / (1 + depth * 0.012);
+    return {
+      x: vx + (gx - vx) * scale,
+      y: vy + (gy - vy) * scale,
+      scale
+    };
+  }
+
+  // Grid lines receding into center
+  const GRID_COLS = 16, GRID_ROWS = 10;
+  function drawGrid() {
+    const vx = W * VP.x, vy = H * VP.y;
+    // Horizontal lines
+    for (let r = 0; r <= GRID_ROWS; r++) {
+      const y = (r / GRID_ROWS) * H;
+      const nearAlpha = 0.25, farAlpha = 0.04;
+      const a = nearAlpha - (nearAlpha - farAlpha) * (r / GRID_ROWS);
+      cx.save();
+      cx.strokeStyle = `rgba(255,215,0,${a})`;
+      cx.lineWidth = 0.7;
+      cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke();
+      cx.restore();
+    }
+    // Vertical lines
+    for (let col = 0; col <= GRID_COLS; col++) {
+      const x = (col / GRID_COLS) * W;
+      const a = 0.04 + 0.18 * Math.abs(col / GRID_COLS - 0.5) * 2;
+      cx.save();
+      cx.strokeStyle = `rgba(0,255,255,${a * 0.6})`;
+      cx.lineWidth = 0.5;
+      cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke();
+      cx.restore();
+    }
+    // Perspective depth lines from corners to vanishing point
+    const corners = [[0,0],[W,0],[W,H],[0,H]];
+    corners.forEach(([px,py]) => {
+      const pulse = 0.08 + 0.05 * Math.sin(t * 0.8);
+      cx.save();
+      cx.strokeStyle = `rgba(255,215,0,${pulse})`;
+      cx.lineWidth = 0.6;
+      cx.beginPath(); cx.moveTo(px, py); cx.lineTo(vx, vy); cx.stroke();
+      cx.restore();
+    });
+  }
+
+  // Streaks
+  const streaks = [];
+  for (let i = 0; i < 80; i++) {
+    streaks.push({
+      x: Math.random() * 1.4 - 0.2,  // fraction of W
+      y: Math.random() * 1.4 - 0.2,  // fraction of H
+      depth: Math.random() * 60 + 5,
+      speed: 0.3 + Math.random() * 0.8,
+      len: 0.02 + Math.random() * 0.06,
+      isGold: Math.random() < 0.4,
+      alpha: 0.3 + Math.random() * 0.5
+    });
+  }
+
+  function drawStreaks() {
+    const vx = W * VP.x, vy = H * VP.y;
+    streaks.forEach(s => {
+      s.depth -= s.speed;
+      if (s.depth < 1) {
+        s.depth = 60 + Math.random() * 40;
+        s.x = Math.random() * 1.4 - 0.2;
+        s.y = Math.random() * 1.4 - 0.2;
+      }
+      const p1 = project(s.x * W, s.y * H, s.depth);
+      const p2 = project(s.x * W, s.y * H, s.depth + s.len * 60);
+      const col = s.isGold ? `rgba(255,215,0,${s.alpha * p1.scale * 3})` : `rgba(0,255,255,${s.alpha * p1.scale * 3})`;
+      cx.save();
+      cx.strokeStyle = col;
+      cx.lineWidth = 0.8 + p1.scale * 1.5;
+      cx.shadowBlur = 4; cx.shadowColor = s.isGold ? '#FFD700' : '#00ffff';
+      cx.beginPath(); cx.moveTo(p1.x, p1.y); cx.lineTo(p2.x, p2.y); cx.stroke();
+      cx.restore();
+    });
+  }
+
+  // Particles
+  const particles = [];
+  for (let i = 0; i < 120; i++) {
+    particles.push({
+      x: Math.random() * 1.4 - 0.2,
+      y: Math.random() * 1.4 - 0.2,
+      depth: Math.random() * 80,
+      speed: 0.15 + Math.random() * 0.4,
+      isGold: Math.random() < 0.5
+    });
+  }
+
+  function drawParticles() {
+    particles.forEach(p => {
+      p.depth -= p.speed;
+      if (p.depth < 1) {
+        p.depth = 80 + Math.random() * 20;
+        p.x = Math.random() * 1.4 - 0.2;
+        p.y = Math.random() * 1.4 - 0.2;
+      }
+      const pr = project(p.x * W, p.y * H, p.depth);
+      const a = Math.min(pr.scale * 2, 0.7);
+      cx.save();
+      cx.fillStyle = p.isGold ? `rgba(255,215,0,${a})` : `rgba(0,255,255,${a * 0.6})`;
+      cx.beginPath(); cx.arc(pr.x, pr.y, Math.max(0.5, pr.scale * 2), 0, Math.PI * 2); cx.fill();
+      cx.restore();
+    });
+  }
+
+  // Vignette
+  function drawVignette() {
+    const g = cx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.75)');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, W, H);
+  }
+
+  // Center glow
+  function drawCenterGlow() {
+    const pulse = 0.06 + 0.03 * Math.sin(t * 1.2);
+    const g = cx.createRadialGradient(W/2, H/2, 0, W/2, H/2, H * 0.35);
+    g.addColorStop(0, `rgba(255,215,0,${pulse})`);
+    g.addColorStop(0.5, `rgba(0,255,255,${pulse * 0.4})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, W, H);
+  }
+
+  function frame() {
+    cx.clearRect(0, 0, W, H);
+    t += 0.016;
+    // Slowly shift vanishing point for cinematic sway
+    VP.x = 0.5 + Math.sin(t * 0.18) * 0.04;
+    VP.y = 0.5 + Math.sin(t * 0.12) * 0.025;
+    drawGrid();
+    drawParticles();
+    drawStreaks();
+    drawCenterGlow();
+    drawVignette();
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
 </script>
 
 </body>
