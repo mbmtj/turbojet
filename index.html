@@ -41,29 +41,10 @@
 
 html, body {
   height: 100%;
-  background: transparent;
+  background: #000;
   color: var(--cyan);
   font-family: var(--font-hud);
   overflow-x: hidden;
-}
-
-/* =============================================
-   THREE.JS CANVAS BACKGROUND
-============================================= */
-canvas#bg-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  background: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 100%);
-  pointer-events: none;
 }
 
 /* =============================================
@@ -1054,8 +1035,6 @@ footer.hud-footer {
 </head>
 <body>
 
-<canvas id="bg-canvas"></canvas>
-<div id="overlay"></div>
 
 <div id="app">
 
@@ -1070,7 +1049,7 @@ footer.hud-footer {
       </div>
       <div class="stat-chip">
         <span class="label">BUILD</span>
-        <span class="value">v2.5</span>
+        <span class="value">v2.3</span>
       </div>
     </div>
 
@@ -1362,7 +1341,7 @@ footer.hud-footer {
   <footer class="hud-footer">
     <div class="footer-left">STARK SYSTEM ONLINE · PH-2026</div>
     <div class="footer-center">TURBO JET · COVERT-OPS MASHMAK</div>
-    <div class="footer-right">BUILD v2.5 · KUSANAGI</div>
+    <div class="footer-right">BUILD v2.3 · KUSANAGI</div>
   </footer>
 
 </div><!-- /#app -->
@@ -1632,7 +1611,6 @@ footer.hud-footer {
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <!-- Lightbox -->
 <div id="img-lightbox">
@@ -1659,1234 +1637,114 @@ setInterval(() => {
 }, 1000);
 
 
-// === Three.js Background — Cinematic Digital City Flythrough ===
-{
-const _canvas = document.getElementById('bg-canvas');
-const _scene = new THREE.Scene();
-_scene.fog = new THREE.FogExp2(0x000000, 0.012);
-
-const _cam = new THREE.PerspectiveCamera(72, window.innerWidth/window.innerHeight, 0.1, 500);
-_cam.position.set(0,0,0);
-
-const _renderer = new THREE.WebGLRenderer({ canvas: _canvas, antialias: true });
-_renderer.setSize(window.innerWidth, window.innerHeight);
-_renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-_renderer.setClearColor(0x000000, 1);
-
-const D  = 280;   // tunnel depth
-const TW = 34;    // tunnel width
-const TH = 19;    // tunnel height
-
-// ─── 1. FLOOR / CEILING / WALL GRIDS (perspective receding) ───
-function makeGrid(axis, coord, w, d, stepsW, stepsD, col, opa) {
-  const pts = [];
-  // lines along depth
-  for(let i=0;i<=stepsW;i++){
-    const u = -w/2 + i*(w/stepsW);
-    if(axis==='y'){ pts.push(u,coord,0, u,coord,-d); }
-    else           { pts.push(coord,u,0, coord,u,-d); }
-  }
-  // lines across width at depth intervals
-  for(let j=0;j<=stepsD;j++){
-    const v = -j*(d/stepsD);
-    if(axis==='y'){ pts.push(-w/2,coord,v, w/2,coord,v); }
-    else           { pts.push(coord,-w/2,v, coord,w/2,v); }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts,3));
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:col,transparent:true,opacity:opa}));
-}
-
-// Floor
-const floor = makeGrid('y', -TH/2, TW, D, 17, 70, 0x00ffff, 0.55);
-_scene.add(floor);
-// Ceiling
-const ceil = makeGrid('y',  TH/2, TW, D, 17, 70, 0x00ffff, 0.35);
-_scene.add(ceil);
-// Left wall
-const wallL = makeGrid('x', -TW/2, TH, D, 9, 70, 0x00ffff, 0.3);
-_scene.add(wallL);
-// Right wall
-const wallR = makeGrid('x',  TW/2, TH, D, 9, 70, 0x00ffff, 0.3);
-_scene.add(wallR);
-
-// ─── 2. CITY BUILDING BLOCKS — sides & top/bottom along the tunnel ───
-function addBuilding(x,y,z,w,h,d,isOrange){
-  const col  = isOrange ? 0x000000 : 0xFFD700;
-  const edge = isOrange ? (Math.random()<0.5?0xFFD700:0xFFD700) : (Math.random()<0.5?0x00ffff:0x00ffff);
-  const geo  = new THREE.BoxGeometry(w,h,d);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.8}));
-  mesh.position.set(x,y,z);
-  _scene.add(mesh);
-  const eg = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({color:edge,transparent:true,opacity:0.7}));
-  eg.position.set(x,y,z);
-  _scene.add(eg);
-  // emissive glow strip on top edge
-  if(Math.random()<0.6){
-    const sw=w*0.8, pts2=[sw/2,0,0,-sw/2,0,0];
-    const sg=new THREE.BufferGeometry();
-    sg.setAttribute('position',new THREE.Float32BufferAttribute(pts2,3));
-    const sl=new THREE.Line(sg,new THREE.LineBasicMaterial({color:edge,transparent:true,opacity:0.9}));
-    sl.position.set(x, isOrange?y+h/2:y-h/2, z);
-    _scene.add(sl);
-  }
-}
-
-// Scatter ~120 buildings on left/right sides and floor/ceiling of tunnel
-for(let i=0;i<120;i++){
-  const isOrange = Math.random()<0.28;
-  const side = Math.floor(Math.random()*4); // 0=left,1=right,2=floor,3=ceil
-  const bw = 0.6+Math.random()*3.5;
-  const bh = 0.5+Math.random()*6;
-  const bd = 0.6+Math.random()*4;
-  const z  = -(8+Math.random()*D*0.95);
-  let x,y;
-  if(side===0){ x=-TW/2-bw/2; y=(Math.random()-0.5)*TH*0.9; }
-  else if(side===1){ x=TW/2+bw/2; y=(Math.random()-0.5)*TH*0.9; }
-  else if(side===2){ x=(Math.random()-0.5)*TW*1.1; y=-TH/2-bh/2; }
-  else             { x=(Math.random()-0.5)*TW*1.1; y=TH/2+bh/2; }
-  addBuilding(x,y,z,bw,bh,bd,isOrange);
-}
-
-// ─── 3. FLOATING HUD PANELS ───
-const _panels=[];
-const panelDefs=[
-  {x:-14,y:4,z:-28,w:9,h:5.5,ec:0x00ffff},{x:13,y:-3,z:-38,w:11,h:4,ec:0xFFD700},
-  {x:-11,y:-5,z:-55,w:7,h:5,ec:0x00ffff},{x:9,y:5,z:-48,w:8,h:3.5,ec:0xFFD700},
-  {x:0,y:7,z:-42,w:14,h:2,ec:0x00ffff},{x:-13,y:2,z:-75,w:10,h:6,ec:0x00ffff},
-  {x:12,y:-6,z:-65,w:8,h:5,ec:0xFFD700},{x:-7,y:-3,z:-90,w:12,h:3,ec:0x00ffff},
-  {x:7,y:3,z:-110,w:9,h:6,ec:0x00ffff},{x:-5,y:6,z:-130,w:7,h:4,ec:0xFFD700},
-  {x:14,y:0,z:-145,w:6,h:8,ec:0x00ffff},{x:-12,y:-4,z:-160,w:10,h:5,ec:0xFFD700},
-  {x:3,y:-7,z:-70,w:5,h:3,ec:0x00ffff},{x:-9,y:6,z:-85,w:8,h:2,ec:0xFFD700},
-];
-panelDefs.forEach((pd,i)=>{
-  const g=new THREE.Group();
-  g.position.set(pd.x,pd.y,pd.z);
-  // dark fill
-  const fc=new THREE.Color(pd.ec); fc.multiplyScalar(0.06);
-  g.add(new THREE.Mesh(new THREE.PlaneGeometry(pd.w,pd.h),
-    new THREE.MeshBasicMaterial({color:fc,transparent:true,opacity:0.55,side:THREE.DoubleSide})));
-  // bright edge
-  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(pd.w,pd.h,0.01)),
-    new THREE.LineBasicMaterial({color:pd.ec,transparent:true,opacity:0.9})));
-  // corner ticks
-  const hw=pd.w/2,hh=pd.h/2,tl=Math.min(pd.w,pd.h)*0.16;
-  [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].forEach(([cx,cy])=>{
-    const sx=Math.sign(cx),sy=Math.sign(cy);
-    const tg=new THREE.BufferGeometry();
-    tg.setAttribute('position',new THREE.Float32BufferAttribute([
-      cx,cy,0.01, cx-sx*tl,cy,0.01, cx,cy,0.01, cx,cy-sy*tl,0.01],3));
-    g.add(new THREE.LineSegments(tg,new THREE.LineBasicMaterial({color:pd.ec,transparent:true,opacity:1})));
-  });
-  // scan bar
-  const barGeo=new THREE.PlaneGeometry(pd.w*0.88,0.07);
-  const barMat=new THREE.MeshBasicMaterial({color:pd.ec,transparent:true,opacity:0.6,side:THREE.DoubleSide});
-  const bar=new THREE.Mesh(barGeo,barMat);
-  bar.position.z=0.02;
-  g.add(bar);
-  // data rows — thin horizontal lines inside panel
-  for(let r=0;r<3;r++){
-    const rw=pd.w*(0.4+Math.random()*0.45);
-    const rg=new THREE.PlaneGeometry(rw,0.04);
-    const rm=new THREE.MeshBasicMaterial({color:pd.ec,transparent:true,opacity:0.25,side:THREE.DoubleSide});
-    const rm2=new THREE.Mesh(rg,rm);
-    rm2.position.set((Math.random()-0.5)*(pd.w-rw)*0.5, -pd.h/2+0.6+(r*0.5), 0.02);
-    g.add(rm2);
-  }
-  _scene.add(g);
-  _panels.push({g,bar,barMat,pd,barY:Math.random()*pd.h-pd.h/2,barDir:Math.random()<0.5?1:-1,
-    dx:(Math.random()-.5)*0.002,dy:(Math.random()-.5)*0.002,phase:i*0.7});
-});
-
-// ─── 4. LIGHT STREAKS — horizontal speed lines flying TOWARD camera ───
-const _streaks=[];
-function spawnStreak(){
-  const isOrange=Math.random()<0.35;
-  const col=isOrange?0xFFD700:(Math.random()<0.55?0x00ffff:0x00ffff);
-  // streaks are HORIZONTAL along X or Y axis — like lateral speed blur in reference
-  const axis=Math.random()<0.5?'x':'y';
-  const len=1.5+Math.random()*9;
-  const speed=0.06+Math.random()*0.18;
-  let x=(Math.random()-0.5)*TW*1.3, y=(Math.random()-0.5)*TH*1.3;
-  const z=-(10+Math.random()*D*0.9);
-  const pts=axis==='x'?[x-len/2,y,z, x+len/2,y,z]:[x,y-len/2,z, x,y+len/2,z];
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.5+Math.random()*0.45});
-  const line=new THREE.Line(geo,mat);
-  _scene.add(line);
-  return{line,geo,axis,x,y,z,len,speed,col,life:1,decay:0.003+Math.random()*0.005};
-}
-for(let i=0;i<100;i++) _streaks.push(spawnStreak());
-
-// ─── 5. VERTICAL DEPTH STREAKS (like the reference's vertical city lines) ───
-const _vstreaks=[];
-function spawnVStreak(){
-  const isOrange=Math.random()<0.3;
-  const col=isOrange?0xFFD700:0x00ffff;
-  const len=0.8+Math.random()*5;
-  const x=(Math.random()-0.5)*TW*1.4;
-  const y=(Math.random()-0.5)*TH*1.4;
-  const z=-(8+Math.random()*D*0.9);
-  const speed=0.04+Math.random()*0.12;
-  const pts=[x,y-len/2,z, x,y+len/2,z];
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.35+Math.random()*0.4});
-  const line=new THREE.Line(geo,mat);
-  _scene.add(line);
-  return{line,geo,x,y,z,len,speed,life:1,decay:0.004+Math.random()*0.006};
-}
-for(let i=0;i<80;i++) _vstreaks.push(spawnVStreak());
-
-// ─── 6. AMBIENT DUST PARTICLES ───
-const _partGeo=new THREE.BufferGeometry();
-const _partPos=[];
-for(let i=0;i<1200;i++){
-  _partPos.push((Math.random()-.5)*TW*1.6,(Math.random()-.5)*TH*1.6,-(Math.random()*D));
-}
-_partGeo.setAttribute('position',new THREE.Float32BufferAttribute(_partPos,3));
-_scene.add(new THREE.Points(_partGeo,new THREE.PointsMaterial({color:0x00ffff,size:0.06,transparent:true,opacity:0.4})));
-
-// ─── 7. VANISHING POINT GLOW HAZE ───
-// Layered halos at different depths
-[{z:-60,r:3,c:0x00ffff},{z:-120,r:5,c:0xFFD700},{z:-200,r:8,c:0x000000}].forEach(h=>{
-  const g=new THREE.Mesh(new THREE.SphereGeometry(h.r,16,16),
-    new THREE.MeshBasicMaterial({color:h.c,transparent:true,opacity:0.5}));
-  g.position.z=h.z; _scene.add(g);
-});
-
-// ─── 8. DENSE HORIZONTAL DATA BARS (reference has many thin bright bars) ───
-for(let i=0;i<60;i++){
-  const isOrange=Math.random()<0.3;
-  const col=isOrange?0xFFD700:0x00ffff;
-  const w=0.3+Math.random()*5;
-  const x=(Math.random()-.5)*TW*1.2;
-  const y=(Math.random()-.5)*TH*1.2;
-  const z=-(12+Math.random()*D*0.85);
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute([x-w/2,y,z, x+w/2,y,z],3));
-  _scene.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.3+Math.random()*0.5})));
-}
-
-// ─── ANIMATE ───
-let _t=0, _camZ=0;
-const _clock={last:performance.now()};
-
-window.addEventListener('resize',()=>{
-  _cam.aspect=window.innerWidth/window.innerHeight;
-  _cam.updateProjectionMatrix();
-  _renderer.setSize(window.innerWidth,window.innerHeight);
-});
-
-(function _animate(){
-  requestAnimationFrame(_animate);
-  const now=performance.now();
-  const dt=Math.min((now-_clock.last)/16.67,3); _clock.last=now;
-  _t+=0.008*dt;
-  _camZ-=0.15*dt;
-  if(_camZ<-D+40) _camZ=0;
-
-  // Camera: slow pan + cinematic tilt
-  _cam.position.set(
-    Math.sin(_t*0.22)*2.0 + Math.sin(_t*0.07)*0.8,
-    Math.sin(_t*0.15)*1.0 + Math.cos(_t*0.09)*0.5,
-    _camZ
-  );
-  _cam.rotation.y=Math.sin(_t*0.12)*0.06;
-  _cam.rotation.x=Math.sin(_t*0.09)*0.025;
-  _cam.rotation.z=Math.sin(_t*0.05)*0.015;
-
-  // Panels: scan bar + drift
-  _panels.forEach((p,i)=>{
-    p.barY+=p.barDir*0.018*dt;
-    if(p.barY> p.pd.h/2-0.08){p.barDir=-1;}
-    if(p.barY<-p.pd.h/2+0.08){p.barDir= 1;}
-    p.bar.position.y=p.barY;
-    p.barMat.opacity=0.15+0.45*Math.abs(Math.sin(_t*0.7+p.phase));
-    p.g.position.x+=p.dx*dt; p.g.position.y+=p.dy*dt;
-    if(Math.abs(p.g.position.x-p.pd.x)>2) p.dx*=-1;
-    if(Math.abs(p.g.position.y-p.pd.y)>1.2) p.dy*=-1;
-    p.g.rotation.y=Math.sin(_t*0.18+p.phase)*0.07;
-    p.g.rotation.x=Math.sin(_t*0.12+p.phase)*0.04;
-  });
-
-  // Horizontal streaks
-  _streaks.forEach((s,i)=>{
-    s.life-=s.decay*dt;
-    if(s.life<=0){
-      // respawn
-      _scene.remove(s.line);
-      const ns=spawnStreak();
-      _streaks[i]=ns;
-      return;
-    }
-    s.line.material.opacity=s.life*(0.5+Math.random()*0.3);
-    // drift slowly along tunnel
-    s.z+=s.speed*dt;
-    if(s.z>2){ _scene.remove(s.line); _streaks[i]=spawnStreak(); return; }
-    const pos=s.geo.attributes.position;
-    if(s.axis==='x'){
-      pos.setXYZ(0,s.x-s.len/2,s.y,s.z);
-      pos.setXYZ(1,s.x+s.len/2,s.y,s.z);
-    } else {
-      pos.setXYZ(0,s.x,s.y-s.len/2,s.z);
-      pos.setXYZ(1,s.x,s.y+s.len/2,s.z);
-    }
-    pos.needsUpdate=true;
-  });
-
-  // Vertical streaks
-  _vstreaks.forEach((s,i)=>{
-    s.life-=s.decay*dt;
-    if(s.life<=0){ _scene.remove(s.line); _vstreaks[i]=spawnVStreak(); return; }
-    s.line.material.opacity=s.life*0.45;
-    s.z+=s.speed*dt;
-    if(s.z>2){ _scene.remove(s.line); _vstreaks[i]=spawnVStreak(); return; }
-    const pos=s.geo.attributes.position;
-    pos.setXYZ(0,s.x,s.y-s.len/2,s.z);
-    pos.setXYZ(1,s.x,s.y+s.len/2,s.z);
-    pos.needsUpdate=true;
-  });
-
-  _renderer.render(_scene,_cam);
-})();
-}
 
 
 
-// === HUD Tech Canvas (map surround) ===
+// === HUD Canvas — Minimal ===
 (function() {
   const hc = document.getElementById('hud-canvas');
   const ctx = hc.getContext('2d');
-  let W, H, mapRect;
-  let t = 0;
-
-  const G = '#FFD700', GD = 'rgba(255,215,0,', GB = '#FFD700';
-
-  // ── STARS ──
-  const stars = [];
-  function buildStars() {
-    stars.length = 0;
-    for (let i = 0; i < 280; i++) {
-      let x, y, tries = 0;
-      do { x = Math.random() * W; y = Math.random() * H; tries++; }
-      while (isInMap(x, y, 6) && tries < 20);
-      if (isInMap(x, y, 4)) continue;
-      stars.push({
-        x, y,
-        r: Math.random() * 1.3 + 0.2,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.3 + Math.random() * 1.0,
-        warm: Math.random() < 0.2
-      });
-    }
-  }
-
-  // ── NEBULA CLOUDS ──
-  const nebulas = [];
-  function buildNebulas() {
-    nebulas.length = 0;
-    [
-      { fx: 0.08, fy: 0.25 }, { fx: 0.08, fy: 0.75 },
-      { fx: 0.92, fy: 0.35 }, { fx: 0.92, fy: 0.65 },
-      { fx: 0.5,  fy: 0.07 }, { fx: 0.5,  fy: 0.93 },
-    ].forEach(s => {
-      const x = s.fx * W, y = s.fy * H;
-      if (!isInMap(x, y, 10)) nebulas.push({
-        x, y,
-        r: 40 + Math.random() * 35,
-        phase: Math.random() * Math.PI * 2,
-        hue: Math.random() < 0.5 ? [0, 160, 255] : [80, 0, 200]
-      });
-    });
-  }
-
-  // ── CONSTELLATION NETWORK ──
-  const cnodes = [], cconns = [];
-  function buildConstellations() {
-    cnodes.length = 0; cconns.length = 0;
-    for (let attempt = 0; attempt < 200 && cnodes.length < 30; attempt++) {
-      const x = Math.random() * W, y = Math.random() * H;
-      if (!isInMap(x, y, 12)) cnodes.push({
-        x, y,
-        r: 1 + Math.random() * 1.5,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.2 + Math.random() * 0.5
-      });
-    }
-    for (let i = 0; i < cnodes.length; i++)
-      for (let j = i + 1; j < cnodes.length; j++) {
-        const dx = cnodes[i].x - cnodes[j].x, dy = cnodes[i].y - cnodes[j].y;
-        const d = Math.sqrt(dx*dx + dy*dy);
-        if (d < 110) cconns.push({ a: i, b: j, d });
-      }
-  }
-
-  // ── WARP LINES ──
-  const warps = [];
-  function spawnWarp() {
-    if (!mapRect) return;
-    const side = Math.floor(Math.random() * 4);
-    let x, y, angle;
-    if (side === 0) { x = Math.random() * mapRect.x; y = Math.random() * H; angle = Math.random() * 0.4 - 0.2; }
-    else if (side === 1) { x = mapRect.x + mapRect.w + Math.random() * (W - mapRect.x - mapRect.w); y = Math.random() * H; angle = Math.PI + Math.random() * 0.4 - 0.2; }
-    else if (side === 2) { x = Math.random() * W; y = Math.random() * mapRect.y; angle = Math.PI * 0.5 + Math.random() * 0.4 - 0.2; }
-    else { x = Math.random() * W; y = mapRect.y + mapRect.h + Math.random() * (H - mapRect.y - mapRect.h); angle = -Math.PI * 0.5 + Math.random() * 0.4 - 0.2; }
-    warps.push({ x, y, angle, speed: 1.8 + Math.random() * 3, len: 18 + Math.random() * 45, life: 1, decay: 0.007 + Math.random() * 0.01 });
-  }
-  function initWarps() { warps.length = 0; for (let i = 0; i < 35; i++) spawnWarp(); }
-
-  function drawSpace() {
-    // 1. Nebula glows
-    nebulas.forEach(n => {
-      const p = 0.035 + 0.02 * Math.sin(t * 0.4 + n.phase);
-      const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 1.6);
-      gr.addColorStop(0,   `rgba(${n.hue[0]},${n.hue[1]},${n.hue[2]},${p * 2.8})`);
-      gr.addColorStop(0.5, `rgba(${n.hue[0]},${n.hue[1]},${n.hue[2]},${p})`);
-      gr.addColorStop(1,   `rgba(${n.hue[0]},${n.hue[1]},${n.hue[2]},0)`);
-      ctx.fillStyle = gr;
-      ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 1.6, 0, Math.PI * 2); ctx.fill();
-    });
-
-    // 2. Stars
-    stars.forEach(s => {
-      const bright = 0.25 + 0.75 * ((Math.sin(t * s.speed + s.phase) + 1) * 0.5);
-      ctx.save();
-      ctx.globalAlpha = bright;
-      ctx.fillStyle = s.warm ? '#FFD700' : '#00ffff';
-      ctx.shadowBlur = s.r > 1 ? 5 : 0;
-      ctx.shadowColor = s.warm ? '#FFD700' : '#00ffff';
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
-      if (s.r > 1 && bright > 0.75) {
-        ctx.strokeStyle = s.warm ? '#FFD700' : '#00ffff';
-        ctx.lineWidth = 0.4;
-        ctx.globalAlpha = bright * 0.35;
-        ctx.beginPath(); ctx.moveTo(s.x - s.r*3, s.y); ctx.lineTo(s.x + s.r*3, s.y); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(s.x, s.y - s.r*3); ctx.lineTo(s.x, s.y + s.r*3); ctx.stroke();
-      }
-      ctx.restore();
-    });
-
-    // 3. Constellation lines + nodes
-    cconns.forEach(c => {
-      const a = cnodes[c.a], b = cnodes[c.b];
-      const alpha = (0.04 + 0.05 * Math.sin(t * 0.3 + a.phase)) * (1 - c.d / 110);
-      ctx.save();
-      ctx.strokeStyle = `rgba(120,190,255,${alpha})`;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      ctx.restore();
-    });
-    cnodes.forEach(n => {
-      const p = 0.35 + 0.65 * ((Math.sin(t * n.speed + n.phase) + 1) * 0.5);
-      ctx.save();
-      ctx.fillStyle = `rgba(140,210,255,${p * 0.85})`;
-      ctx.shadowBlur = 5; ctx.shadowColor = '#00ffff';
-      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    });
-
-    // 4. Warp lines
-    for (let i = warps.length - 1; i >= 0; i--) {
-      const w = warps[i];
-      w.x += Math.cos(w.angle) * w.speed;
-      w.y += Math.sin(w.angle) * w.speed;
-      w.life -= w.decay;
-      if (w.life <= 0 || isInMap(w.x, w.y, 2)) { warps.splice(i, 1); spawnWarp(); continue; }
-      ctx.save();
-      ctx.strokeStyle = `rgba(200,230,255,${w.life * 0.55})`;
-      ctx.lineWidth = 0.7;
-      ctx.shadowBlur = 3; ctx.shadowColor = '#00ffff';
-      ctx.beginPath();
-      ctx.moveTo(w.x, w.y);
-      ctx.lineTo(w.x - Math.cos(w.angle) * w.len * w.life, w.y - Math.sin(w.angle) * w.len * w.life);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
+  let W, H, mapRect, t = 0;
 
   function resize() {
     const area = document.querySelector('.map-area');
-    const r = area.getBoundingClientRect();
-    W = hc.width  = r.width;
-    H = hc.height = r.height;
+    const ar = area.getBoundingClientRect();
+    W = hc.width  = ar.width;
+    H = hc.height = ar.height;
     const mc = document.getElementById('map-container');
     const mr = mc.getBoundingClientRect();
-    const ar = area.getBoundingClientRect();
     mapRect = { x: mr.left - ar.left, y: mr.top - ar.top, w: mr.width, h: mr.height };
-    buildCircuitTraces();
-    buildFloatRects();
-    buildStars();
-    buildNebulas();
-    buildConstellations();
-    initWarps();
   }
   window.addEventListener('resize', () => setTimeout(resize, 100));
   setTimeout(resize, 200);
 
   function isInMap(x, y, pad) {
-    pad = pad || 0;
     if (!mapRect) return false;
+    pad = pad || 0;
     return x > mapRect.x - pad && x < mapRect.x + mapRect.w + pad &&
            y > mapRect.y - pad && y < mapRect.y + mapRect.h + pad;
   }
 
-  // ── CIRCUIT TRACES along the outer edges ──
-  const traces = [];
-  function buildCircuitTraces() {
-    traces.length = 0;
-    // Generate L-shaped circuit paths confined to border strips
-    const strips = [
-      { axis:'h', band:{ x:0, y:0, w:W, h: mapRect ? mapRect.y : 30 } },
-      { axis:'h', band:{ x:0, y: mapRect ? mapRect.y+mapRect.h : H-30, w:W, h:H } },
-      { axis:'v', band:{ x:0, y:0, w: mapRect ? mapRect.x : 30, h:H } },
-      { axis:'v', band:{ x: mapRect ? mapRect.x+mapRect.w : W-30, y:0, w:W, h:H } },
-    ];
-    strips.forEach(strip => {
-      for (let i = 0; i < 8; i++) {
-        const segs = [];
-        let cx, cy;
-        if (strip.axis === 'h') {
-          cx = Math.random() * strip.band.w;
-          cy = strip.band.y + Math.random() * Math.max(4, strip.band.h - strip.band.y);
-        } else {
-          cx = strip.band.x + Math.random() * Math.max(4, strip.band.w - strip.band.x);
-          cy = Math.random() * H;
-        }
-        for (let s = 0; s < 5; s++) {
-          const horiz = (s % 2 === 0);
-          const len = 12 + Math.random() * 40;
-          const dir = Math.random() < 0.5 ? 1 : -1;
-          const nx = horiz ? cx + len * dir : cx;
-          const ny = horiz ? cy : cy + len * dir;
-          segs.push({ x1: cx, y1: cy, x2: nx, y2: ny });
-          cx = nx; cy = ny;
-        }
-        traces.push({
-          segs,
-          phase: Math.random() * Math.PI * 2,
-          speed: 0.3 + Math.random() * 0.6,
-          bright: 0.3 + Math.random() * 0.4
-        });
+  // Sparse dot grid
+  function drawDotGrid() {
+    const step = 28;
+    for (let x = 0; x < W; x += step) {
+      for (let y = 0; y < H; y += step) {
+        if (isInMap(x, y, 6)) continue;
+        const pulse = 0.08 + 0.05 * Math.sin(t * 0.4 + x * 0.05 + y * 0.03);
+        ctx.fillStyle = `rgba(255,215,0,${pulse})`;
+        ctx.beginPath();
+        ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+        ctx.fill();
       }
-    });
-  }
-
-  // ── FLOATING GRID RECTANGLES (center background feel) ──
-  const floatRects = [];
-  function buildFloatRects() {
-    floatRects.length = 0;
-    // Scattered small boxes only in border areas
-    for (let i = 0; i < 60; i++) {
-      let x, y, tries = 0;
-      do {
-        x = Math.random() * W;
-        y = Math.random() * H;
-        tries++;
-      } while (isInMap(x, y, 8) && tries < 30);
-      if (isInMap(x, y, 4)) continue;
-      floatRects.push({
-        x, y,
-        w: 4 + Math.random() * 16,
-        h: 4 + Math.random() * 16,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.2 + Math.random() * 0.5
-      });
     }
   }
 
-  // ── CONCENTRIC ARCS — left side ──
-  const arcRings = [
-    { r: 30, dash: [6,4],  speed:  0.008, startA: -Math.PI*0.7, endA: Math.PI*0.7 },
-    { r: 48, dash: [4,6],  speed: -0.006, startA: -Math.PI*0.6, endA: Math.PI*0.6 },
-    { r: 65, dash: [8,5],  speed:  0.005, startA: -Math.PI*0.5, endA: Math.PI*0.5 },
-    { r: 82, dash: [3,7],  speed: -0.004, startA: -Math.PI*0.4, endA: Math.PI*0.4 },
-    { r: 98, dash: [6,8],  speed:  0.003, startA: -Math.PI*0.35,endA: Math.PI*0.35 },
-  ];
-  const arcAngles = arcRings.map(() => 0);
-
-  // ── PERCENTAGE CIRCLES — top right area ──
-  const pctCircles = [
-    { pct: 0.86, label: '86%', offset: 0 },
-    { pct: 0.60, label: '60%', offset: 1 },
-    { pct: 0.40, label: '40%', offset: 2 },
-  ];
-
-  // ── SMALL CORNER SQUARES ──
-  function drawCornerSquare(x, y, size, alpha) {
-    ctx.save();
-    ctx.strokeStyle = GD + alpha + ')';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, size, size);
-    ctx.restore();
-  }
-
-  // ── SCAN LINE ──
-  let scanY = 0;
-
-  function drawCircuitTraces() {
-    traces.forEach(tr => {
-      const a = tr.bright * (0.5 + 0.5 * Math.sin(t * tr.speed + tr.phase));
-      ctx.save();
-      ctx.strokeStyle = GD + a + ')';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = G;
-      tr.segs.forEach(seg => {
-        ctx.beginPath();
-        ctx.moveTo(seg.x1, seg.y1);
-        ctx.lineTo(seg.x2, seg.y2);
-        ctx.stroke();
-      });
-      // dot at end
-      const last = tr.segs[tr.segs.length - 1];
-      ctx.fillStyle = GD + (a * 2) + ')';
-      ctx.beginPath();
-      ctx.arc(last.x2, last.y2, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  function drawFloatRects() {
-    floatRects.forEach(r => {
-      const a = 0.04 + 0.06 * Math.sin(t * r.speed + r.phase);
-      ctx.save();
-      ctx.strokeStyle = GD + a + ')';
-      ctx.lineWidth = 0.8;
-      ctx.strokeRect(r.x, r.y, r.w, r.h);
-      ctx.fillStyle = GD + (a * 0.4) + ')';
-      ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.restore();
-    });
-  }
-
-  function drawConcentrieArcs() {
+  // Corner brackets around map
+  function drawMapBrackets() {
     if (!mapRect) return;
-    // Position: vertically centered on left black strip
-    const cx = mapRect.x * 0.5;
-    const cy = H * 0.5;
-    if (mapRect.x < 60) return;
-
-    arcRings.forEach((ring, i) => {
-      arcAngles[i] += ring.speed;
-      const pulse = 0.5 + 0.3 * Math.sin(t * 1.2 + i * 0.8);
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(arcAngles[i]);
-      ctx.setLineDash(ring.dash);
-      ctx.strokeStyle = GD + (pulse * 0.7) + ')';
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = G;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(0, 0, ring.r, ring.startA, ring.endA);
-      ctx.stroke();
-      ctx.restore();
-    });
-
-    // Center dot + inner solid ring
-    const cp = 0.6 + 0.4 * Math.sin(t * 2);
+    const s = 18, pad = 10;
+    const x0 = mapRect.x - pad, y0 = mapRect.y - pad;
+    const x1 = mapRect.x + mapRect.w + pad, y1 = mapRect.y + mapRect.h + pad;
+    const alpha = 0.5 + 0.2 * Math.sin(t * 0.8);
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.strokeStyle = GD + (cp * 0.9) + ')';
+    ctx.strokeStyle = `rgba(255,215,0,${alpha})`;
     ctx.lineWidth = 1.5;
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 12; ctx.shadowColor = G;
-    ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
-    // dot
-    const g = ctx.createRadialGradient(0,0,0, 0,0,10);
-    g.addColorStop(0, GD + cp + ')');
-    g.addColorStop(1, GD + '0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 8; ctx.shadowColor = '#FFD700';
+    const corners = [[x0,y0,1,1],[x1,y0,-1,1],[x1,y1,-1,-1],[x0,y1,1,-1]];
+    corners.forEach(([cx,cy,sx,sy]) => {
+      ctx.beginPath(); ctx.moveTo(cx+sx*s,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*s); ctx.stroke();
+    });
     ctx.restore();
   }
 
-  function drawPercentageCircles() {
+  // Thin edge lines beside map
+  function drawEdgeLines() {
     if (!mapRect) return;
-    // Top-right area, above the map
-    const topH = mapRect.y;
-    if (topH < 30) return;
-    const rightX = mapRect.x + mapRect.w;
-    const r = Math.min(22, topH * 0.38);
-    const spacing = r * 2.8;
-    const cy = mapRect.y * 0.52;
-
-    pctCircles.forEach((pc, i) => {
-      const cx = rightX - spacing * (pctCircles.length - i - 0.5);
-      if (cx < mapRect.x + 10) return;
-      const pulse = 0.7 + 0.3 * Math.sin(t * 1.5 + i * 1.2);
-
-      // Background ring
-      ctx.save();
-      ctx.strokeStyle = GD + '0.15)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-
-      // Progress arc
-      ctx.strokeStyle = GD + (pulse * 0.9) + ')';
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = 8; ctx.shadowColor = G;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * pc.pct);
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle = GD + pulse + ')';
-      ctx.font = `bold ${Math.max(8, r * 0.45)}px Orbitron, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowBlur = 6; ctx.shadowColor = G;
-      ctx.fillText(pc.label, cx, cy);
-      ctx.restore();
-    });
-  }
-
-  function drawEdgeUI() {
-    if (!mapRect) return;
-
-    // ── Top edge: thin line with notches ──
-    const topY = mapRect.y - 8;
-    if (topY > 4) {
-      ctx.save();
-      ctx.strokeStyle = GD + '0.3)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 4; ctx.shadowColor = G;
-      // full top line
-      ctx.beginPath();
-      ctx.moveTo(mapRect.x, topY);
-      ctx.lineTo(mapRect.x + mapRect.w, topY);
-      ctx.stroke();
-      // tick marks every ~60px
-      ctx.strokeStyle = GD + '0.5)';
-      ctx.lineWidth = 1;
-      for (let tx = mapRect.x + 30; tx < mapRect.x + mapRect.w - 30; tx += 60) {
-        ctx.beginPath();
-        ctx.moveTo(tx, topY - 4);
-        ctx.lineTo(tx, topY + 4);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // ── Bottom edge: thin line ──
-    const botY = mapRect.y + mapRect.h + 8;
-    if (botY < H - 4) {
-      ctx.save();
-      ctx.strokeStyle = GD + '0.3)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 4; ctx.shadowColor = G;
-      ctx.beginPath();
-      ctx.moveTo(mapRect.x, botY);
-      ctx.lineTo(mapRect.x + mapRect.w, botY);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // ── Left edge vertical line ──
-    const leftX = mapRect.x - 8;
-    if (leftX > 4) {
-      ctx.save();
-      ctx.strokeStyle = GD + '0.3)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 4; ctx.shadowColor = G;
-      ctx.beginPath();
-      ctx.moveTo(leftX, mapRect.y);
-      ctx.lineTo(leftX, mapRect.y + mapRect.h);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // ── Right edge vertical line ──
-    const rightX2 = mapRect.x + mapRect.w + 8;
-    if (rightX2 < W - 4) {
-      ctx.save();
-      ctx.strokeStyle = GD + '0.3)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 4; ctx.shadowColor = G;
-      ctx.beginPath();
-      ctx.moveTo(rightX2, mapRect.y);
-      ctx.lineTo(rightX2, mapRect.y + mapRect.h);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // ── Corner small brackets (outer) ──
-    const bsz = 10, boff = 12;
-    const corners = [
-      { x: mapRect.x - boff - bsz, y: mapRect.y - boff - bsz },
-      { x: mapRect.x + mapRect.w + boff, y: mapRect.y - boff - bsz },
-      { x: mapRect.x - boff - bsz, y: mapRect.y + mapRect.h + boff },
-      { x: mapRect.x + mapRect.w + boff, y: mapRect.y + mapRect.h + boff },
-    ];
-    const ca = 0.35 + 0.2 * Math.sin(t * 1.5);
-    corners.forEach(c => drawCornerSquare(c.x, c.y, bsz, ca));
-
-    // ── Top-left text label ──
-    if (mapRect.y > 14) {
-      ctx.save();
-      ctx.fillStyle = GD + '0.35)';
-      ctx.font = '9px Share Tech Mono, monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('TACTICAL MAP // MASHMAK', mapRect.x, mapRect.y * 0.4);
-      ctx.restore();
-    }
-
-    // ── Bottom-right coordinates ──
-    if (H - mapRect.y - mapRect.h > 10) {
-      ctx.save();
-      ctx.fillStyle = GD + '0.3)';
-      ctx.font = '9px Share Tech Mono, monospace';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('SYS:ONLINE // v2.5', mapRect.x + mapRect.w, mapRect.y + mapRect.h + (H - mapRect.y - mapRect.h) * 0.5);
-      ctx.restore();
-    }
-
-    // ── Right side: small dashes/rows ──
-    const rStrip = W - (mapRect.x + mapRect.w);
-    if (rStrip > 20) {
-      ctx.save();
-      ctx.fillStyle = GD + '0.25)';
-      ctx.font = '8px Share Tech Mono, monospace';
-      ctx.textAlign = 'center';
-      const rx = mapRect.x + mapRect.w + rStrip * 0.5;
-      for (let row = 0; row < 6; row++) {
-        const ry = mapRect.y + mapRect.h * 0.25 + row * 18;
-        ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 0.8 + row);
-        ctx.fillText('——', rx, ry);
-      }
-      ctx.restore();
-    }
-  }
-
-  function drawScanLine() {
-    scanY += 0.6;
-    if (scanY > H) scanY = 0;
+    const alpha = 0.18 + 0.06 * Math.sin(t * 0.5);
     ctx.save();
-    ctx.strokeStyle = GD + '0.15)';
+    ctx.strokeStyle = `rgba(255,215,0,${alpha})`;
     ctx.lineWidth = 1;
-    ctx.shadowBlur = 5; ctx.shadowColor = G;
-    if (mapRect.x > 2 && !isInMap(4, scanY)) {
+    // left
+    if (mapRect.x > 4) {
+      ctx.beginPath(); ctx.moveTo(mapRect.x - 4, mapRect.y); ctx.lineTo(mapRect.x - 4, mapRect.y + mapRect.h); ctx.stroke();
+    }
+    // right
+    if (mapRect.x + mapRect.w < W - 4) {
+      ctx.beginPath(); ctx.moveTo(mapRect.x + mapRect.w + 4, mapRect.y); ctx.lineTo(mapRect.x + mapRect.w + 4, mapRect.y + mapRect.h); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Scan line — outside map only
+  let scanY = 0;
+  function drawScanLine() {
+    scanY += 0.5;
+    if (scanY > H) scanY = 0;
+    if (!mapRect) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,215,0,0.12)';
+    ctx.lineWidth = 1;
+    if (mapRect.x > 2) {
       ctx.beginPath(); ctx.moveTo(0, scanY); ctx.lineTo(mapRect.x, scanY); ctx.stroke();
     }
-    if (mapRect.x + mapRect.w < W - 2 && !isInMap(W - 4, scanY)) {
+    if (mapRect.x + mapRect.w < W - 2) {
       ctx.beginPath(); ctx.moveTo(mapRect.x + mapRect.w, scanY); ctx.lineTo(W, scanY); ctx.stroke();
     }
     ctx.restore();
   }
 
-  // ── DATA STREAMS — vertical flowing particles on left & right strips ──
-  const dataStreams = [];
-  function buildDataStreams() {
-    dataStreams.length = 0;
-    if (!mapRect) return;
-    for (let i = 0; i < 12; i++) {
-      dataStreams.push({ x: Math.random() * (mapRect.x - 10) + 5, y: Math.random() * H, speed: 0.4 + Math.random() * 1.2, len: 10 + Math.random() * 30, alpha: 0.2 + Math.random() * 0.5 });
-    }
-    const rStart = mapRect.x + mapRect.w + 5;
-    for (let i = 0; i < 12; i++) {
-      dataStreams.push({ x: rStart + Math.random() * Math.max(1, W - rStart - 5), y: Math.random() * H, speed: 0.4 + Math.random() * 1.2, len: 10 + Math.random() * 30, alpha: 0.2 + Math.random() * 0.5 });
-    }
-  }
-  function drawDataStreams() {
-    if (!mapRect) return;
-    dataStreams.forEach(s => {
-      s.y += s.speed;
-      if (s.y > H + s.len) s.y = -s.len;
-      const grad = ctx.createLinearGradient(s.x, s.y - s.len, s.x, s.y);
-      grad.addColorStop(0, `rgba(255,215,0,0)`);
-      grad.addColorStop(1, `rgba(255,215,0,${s.alpha})`);
-      ctx.save(); ctx.strokeStyle = grad; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(s.x, s.y - s.len); ctx.lineTo(s.x, s.y); ctx.stroke();
-      ctx.fillStyle = GD + (s.alpha * 1.8) + ')';
-      ctx.beginPath(); ctx.arc(s.x, s.y, 1.2, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  // ══════════════════════════════════════════════
-  //  AERIAL CITY RECON — full outside-map theme
-  // ══════════════════════════════════════════════
-
-  // City building footprints — randomly placed, avoid map
-  const buildings = [];
-  function buildCity() {
-    buildings.length = 0;
-    if (!mapRect) return;
-    const tries = 300;
-    for (let i = 0; i < tries; i++) {
-      const w = 8 + Math.random() * 28;
-      const h = 6 + Math.random() * 22;
-      const x = Math.random() * W;
-      const y = Math.random() * H;
-      if (isInMap(x, y, 18) || isInMap(x+w, y, 18) || isInMap(x, y+h, 18) || isInMap(x+w, y+h, 18)) continue;
-      buildings.push({
-        x, y, w, h,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.1 + Math.random() * 0.25,
-        tier: Math.random(), // 0=small, 1=tall landmark
-        lit: Math.random() < 0.4,
-        litPhase: Math.random() * Math.PI * 2,
-      });
-    }
-  }
-
-  function drawBuildings() {
-    buildings.forEach(b => {
-      const pulse = 0.5 + 0.5 * Math.sin(t * b.speed + b.phase);
-      const base = b.tier > 0.8 ? 0.18 : b.tier > 0.5 ? 0.10 : 0.06;
-      ctx.save();
-      // Fill
-      ctx.fillStyle = GD + (base * pulse * 0.5) + ')';
-      ctx.fillRect(b.x, b.y, b.w, b.h);
-      // Outline
-      ctx.strokeStyle = GD + (base * pulse + 0.04) + ')';
-      ctx.lineWidth = b.tier > 0.8 ? 1.2 : 0.7;
-      ctx.shadowBlur = b.tier > 0.8 ? 8 : 3;
-      ctx.shadowColor = G;
-      ctx.strokeRect(b.x, b.y, b.w, b.h);
-      // Rooftop light for tall buildings
-      if (b.lit) {
-        const litPulse = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.5 + b.litPhase));
-        ctx.fillStyle = `rgba(255,100,80,${litPulse * 0.8})`;
-        ctx.shadowBlur = 6; ctx.shadowColor = '#FFD700';
-        ctx.beginPath();
-        ctx.arc(b.x + b.w * 0.5, b.y + b.h * 0.5, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    });
-  }
-
-  // City road grid — axis-aligned streets in border strips
-  const roads = [];
-  function buildRoads() {
-    roads.length = 0;
-    if (!mapRect) return;
-    // Horizontal roads in top & bottom strips
-    const spacing = 22;
-    for (let y = 10; y < mapRect.y - 4; y += spacing)
-      roads.push({ x1: 0, y1: y, x2: W, y2: y, axis: 'h' });
-    for (let y = mapRect.y + mapRect.h + 10; y < H; y += spacing)
-      roads.push({ x1: 0, y1: y, x2: W, y2: y, axis: 'h' });
-    // Vertical roads in left & right strips
-    for (let x = 10; x < mapRect.x - 4; x += spacing)
-      roads.push({ x1: x, y1: 0, x2: x, y2: H, axis: 'v' });
-    for (let x = mapRect.x + mapRect.w + 10; x < W; x += spacing)
-      roads.push({ x1: x, y1: 0, x2: x, y2: H, axis: 'v' });
-  }
-
-  function drawRoads() {
-    roads.forEach(r => {
-      ctx.save();
-      ctx.strokeStyle = GD + '0.06)';
-      ctx.lineWidth = 0.6;
-      ctx.setLineDash([4, 8]);
-      ctx.beginPath(); ctx.moveTo(r.x1, r.y1); ctx.lineTo(r.x2, r.y2); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    });
-  }
-
-  // Moving vehicles on roads — tiny dots that slide along streets
-  const vehicles = [];
-  function buildVehicles() {
-    vehicles.length = 0;
-    if (!mapRect) return;
-    roads.forEach(r => {
-      if (Math.random() < 0.45) {
-        const fwd = Math.random() < 0.5;
-        vehicles.push({
-          road: r,
-          pos: Math.random(),
-          speed: (0.0008 + Math.random() * 0.0016) * (fwd ? 1 : -1),
-          color: Math.random() < 0.3 ? '#FFD700' : '#00ffff',
-        });
-      }
-    });
-  }
-
-  function drawVehicles() {
-    vehicles.forEach(v => {
-      v.pos += v.speed;
-      if (v.pos > 1.05) v.pos = -0.05;
-      if (v.pos < -0.05) v.pos = 1.05;
-      const r = v.road;
-      let vx, vy;
-      if (r.axis === 'h') {
-        vx = r.x1 + (r.x2 - r.x1) * v.pos;
-        vy = r.y1;
-      } else {
-        vx = r.x1;
-        vy = r.y1 + (r.y2 - r.y1) * v.pos;
-      }
-      if (isInMap(vx, vy, 6)) return;
-      ctx.save();
-      ctx.fillStyle = v.color === '#FFD700' ? 'rgba(255,215,0,0.7)' : 'rgba(0,255,255,0.5)';
-      ctx.shadowBlur = 5; ctx.shadowColor = v.color;
-      ctx.beginPath(); ctx.arc(vx, vy, 1.8, 0, Math.PI * 2); ctx.fill();
-      // Tail light trail
-      const tailLen = 6;
-      const dx = r.axis === 'h' ? -Math.sign(v.speed) * tailLen : 0;
-      const dy = r.axis === 'v' ? -Math.sign(v.speed) * tailLen : 0;
-      const trailGrad = ctx.createLinearGradient(vx + dx, vy + dy, vx, vy);
-      trailGrad.addColorStop(0, v.color.replace(')', ',0)').replace('rgb', 'rgba'));
-      trailGrad.addColorStop(1, v.color === '#FFD700' ? 'rgba(255,215,0,0.4)' : 'rgba(0,255,255,0.3)');
-      ctx.strokeStyle = trailGrad;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(vx + dx, vy + dy); ctx.lineTo(vx, vy); ctx.stroke();
-      ctx.restore();
-    });
-  }
-
-  // Aerial scan beam — wide sweeping horizontal beam from above
-  let scanBeamY = 0;
-  let scanBeamDir = 1;
-  const scanBeamSpeed = 0.5;
-
-  function drawAerialScanBeam() {
-    if (!mapRect) return;
-    scanBeamY += scanBeamSpeed * scanBeamDir;
-    if (scanBeamY > H + 30) scanBeamDir = -1;
-    if (scanBeamY < -30) scanBeamDir = 1;
-
-    // Left strip beam
-    if (mapRect.x > 6) {
-      ctx.save();
-      const lg = ctx.createLinearGradient(0, scanBeamY - 18, 0, scanBeamY + 18);
-      lg.addColorStop(0,   'rgba(255,215,0,0)');
-      lg.addColorStop(0.4, 'rgba(255,215,0,0.06)');
-      lg.addColorStop(0.5, 'rgba(255,215,0,0.18)');
-      lg.addColorStop(0.6, 'rgba(255,215,0,0.06)');
-      lg.addColorStop(1,   'rgba(255,215,0,0)');
-      ctx.fillStyle = lg;
-      ctx.fillRect(0, scanBeamY - 18, mapRect.x, 36);
-      // Bright leading edge
-      ctx.strokeStyle = GD + '0.4)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 8; ctx.shadowColor = G;
-      ctx.beginPath(); ctx.moveTo(0, scanBeamY); ctx.lineTo(mapRect.x, scanBeamY); ctx.stroke();
-      ctx.restore();
-    }
-    // Right strip beam
-    const rx = mapRect.x + mapRect.w;
-    if (rx < W - 6) {
-      ctx.save();
-      const rg = ctx.createLinearGradient(rx, scanBeamY - 18, rx, scanBeamY + 18);
-      rg.addColorStop(0,   'rgba(255,215,0,0)');
-      rg.addColorStop(0.5, 'rgba(255,215,0,0.18)');
-      rg.addColorStop(1,   'rgba(255,215,0,0)');
-      ctx.fillStyle = rg;
-      ctx.fillRect(rx, scanBeamY - 18, W - rx, 36);
-      ctx.strokeStyle = GD + '0.4)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 8; ctx.shadowColor = G;
-      ctx.beginPath(); ctx.moveTo(rx, scanBeamY); ctx.lineTo(W, scanBeamY); ctx.stroke();
-      ctx.restore();
-    }
-    // Top strip
-    if (mapRect.y > 6) {
-      ctx.save();
-      const tg = ctx.createLinearGradient(0, 0, 0, mapRect.y);
-      tg.addColorStop(0, 'rgba(0,255,255,0)');
-      tg.addColorStop(Math.min(1, Math.max(0, scanBeamY / H)), 'rgba(0,255,255,0.07)');
-      tg.addColorStop(1, 'rgba(0,255,255,0)');
-      ctx.fillStyle = tg;
-      ctx.fillRect(0, 0, W, mapRect.y);
-      ctx.restore();
-    }
-  }
-
-  // Drone camera — a small reticule that slowly drifts over the city like drone FOV
-  let droneX = 60, droneY = 60;
-  let droneTX = 60, droneTY = 60;
-  let droneTimer = 0;
-  let droneZoom = 1.0, droneZoomTarget = 1.0;
-
-  function drawDroneCamera() {
-    if (!mapRect) return;
-    droneTimer++;
-    if (droneTimer > 120) {
-      droneTimer = 0;
-      // Pick new target in left or right strip
-      const useLeft = Math.random() < 0.5 && mapRect.x > 40;
-      if (useLeft) {
-        droneTX = 12 + Math.random() * (mapRect.x - 24);
-        droneTY = 12 + Math.random() * (H - 24);
-      } else {
-        const rx = mapRect.x + mapRect.w + 12;
-        droneTX = rx + Math.random() * Math.max(1, W - rx - 12);
-        droneTY = 12 + Math.random() * (H - 24);
-      }
-      droneZoomTarget = 0.7 + Math.random() * 0.7;
-    }
-    droneX += (droneTX - droneX) * 0.018;
-    droneY += (droneTY - droneY) * 0.018;
-    droneZoom += (droneZoomTarget - droneZoom) * 0.02;
-
-    if (isInMap(droneX, droneY, 10)) return;
-
-    const sz = 18 * droneZoom;
-    const gap = 5 * droneZoom;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 3);
-
+  // Top-left label
+  function drawLabel() {
+    if (!mapRect || mapRect.y < 14) return;
     ctx.save();
-    ctx.strokeStyle = `rgba(0,255,200,${0.6 + pulse * 0.3})`;
-    ctx.lineWidth = 1;
-    ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
-
-    // L-bracket corners
-    const arms = [[-1,-1],[1,-1],[1,1],[-1,1]];
-    arms.forEach(([sx, sy]) => {
-      ctx.beginPath();
-      ctx.moveTo(droneX + sx * gap, droneY + sy * sz);
-      ctx.lineTo(droneX + sx * gap, droneY + sy * gap);
-      ctx.lineTo(droneX + sx * sz, droneY + sy * gap);
-      ctx.stroke();
-    });
-
-    // Center cross
-    ctx.strokeStyle = `rgba(0,255,200,${0.3 + pulse * 0.2})`;
-    ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.moveTo(droneX - sz * 0.5, droneY); ctx.lineTo(droneX + sz * 0.5, droneY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(droneX, droneY - sz * 0.5); ctx.lineTo(droneX, droneY + sz * 0.5); ctx.stroke();
-
-    // Outer dashed orbit ring
-    ctx.strokeStyle = `rgba(0,255,200,${0.15 + pulse * 0.1})`;
-    ctx.lineWidth = 0.7;
-    ctx.setLineDash([2, 5]);
-    ctx.beginPath(); ctx.arc(droneX, droneY, sz * 1.5, 0, Math.PI * 2); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // "ALT" readout
-    ctx.fillStyle = `rgba(0,255,200,${0.4 + pulse * 0.2})`;
-    ctx.font = '7px Share Tech Mono, monospace';
+    ctx.fillStyle = 'rgba(255,215,0,0.3)';
+    ctx.font = '9px "Share Tech Mono", monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(`ALT:${Math.floor(320 + droneZoom * 80)}m`, droneX + sz + 3, droneY - 3);
-    ctx.fillText(`SCAN`, droneX + sz + 3, droneY + 7);
-    ctx.restore();
-  }
-
-  // Altitude rings — concentric circles emanating from drone position to simulate height rings
-  const altRings = [];
-  function spawnAltRing() {
-    if (!mapRect || isInMap(droneX, droneY, 10)) return;
-    altRings.push({ x: droneX, y: droneY, r: 0, life: 1.0 });
-  }
-  let altRingTimer = 0;
-
-  function drawAltRings() {
-    altRingTimer++;
-    if (altRingTimer > 90) { altRingTimer = 0; spawnAltRing(); }
-    for (let i = altRings.length - 1; i >= 0; i--) {
-      const ar = altRings[i];
-      ar.r += 0.8;
-      ar.life -= 0.008;
-      if (ar.life <= 0 || ar.r > 80) { altRings.splice(i, 1); continue; }
-      ctx.save();
-      ctx.strokeStyle = `rgba(0,255,200,${ar.life * 0.25})`;
-      ctx.lineWidth = 0.8;
-      ctx.shadowBlur = 4; ctx.shadowColor = '#00ffff';
-      ctx.beginPath(); ctx.arc(ar.x, ar.y, ar.r, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  // POI markers — static target diamond markers on notable building clusters
-  const poiMarkers = [];
-  function buildPOIMarkers() {
-    poiMarkers.length = 0;
-    if (!mapRect) return;
-    // Pick 6–8 random buildings to mark as POIs
-    const shuffled = [...buildings].sort(() => Math.random() - 0.5).slice(0, 7);
-    shuffled.forEach(b => {
-      poiMarkers.push({
-        x: b.x + b.w * 0.5,
-        y: b.y - 6,
-        label: ['POI', 'TGT', 'OBJ', 'HOT', 'REC', 'SUS', 'MRK'][Math.floor(Math.random() * 7)],
-        phase: Math.random() * Math.PI * 2,
-        color: Math.random() < 0.4 ? '#FFD700' : GD.replace('rgba(', '').replace(',', ',') + '1)'
-      });
-    });
-  }
-
-  function drawPOIMarkers() {
-    poiMarkers.forEach(p => {
-      if (isInMap(p.x, p.y, 8)) return;
-      const pulse = 0.5 + 0.5 * Math.sin(t * 1.2 + p.phase);
-      const isRed = p.color === '#FFD700';
-      ctx.save();
-      ctx.strokeStyle = isRed ? `rgba(255,68,68,${0.5 + pulse * 0.4})` : GD + (0.4 + pulse * 0.4) + ')';
-      ctx.fillStyle   = isRed ? `rgba(255,68,68,${0.15 + pulse * 0.1})` : GD + (0.08 + pulse * 0.06) + ')';
-      ctx.lineWidth = 0.8;
-      ctx.shadowBlur = isRed ? 8 : 5;
-      ctx.shadowColor = isRed ? '#FFD700' : G;
-      // Diamond
-      const d = 4;
-      ctx.beginPath();
-      ctx.moveTo(p.x,     p.y - d);
-      ctx.lineTo(p.x + d, p.y);
-      ctx.lineTo(p.x,     p.y + d);
-      ctx.lineTo(p.x - d, p.y);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      // Label
-      ctx.fillStyle = isRed ? `rgba(255,68,68,${0.6 + pulse * 0.3})` : GD + (0.5 + pulse * 0.3) + ')';
-      ctx.font = '6px Share Tech Mono, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.label, p.x, p.y - d - 3);
-      ctx.restore();
-    });
-  }
-
-  // Tactical grid overlay — fine coordinate grid over the entire border area
-  function drawTacticalGrid() {
-    if (!mapRect) return;
-    const gs = 30;
-    ctx.save();
-    ctx.strokeStyle = GD + '0.04)';
-    ctx.lineWidth = 0.4;
-    // Horizontal
-    for (let y = 0; y < H; y += gs) {
-      const inTopStrip = y < mapRect.y;
-      const inBotStrip = y > mapRect.y + mapRect.h;
-      if (!inTopStrip && !inBotStrip) {
-        // Only draw left and right segments
-        if (mapRect.x > 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapRect.x, y); ctx.stroke(); }
-        if (mapRect.x + mapRect.w < W - 4) { ctx.beginPath(); ctx.moveTo(mapRect.x + mapRect.w, y); ctx.lineTo(W, y); ctx.stroke(); }
-      } else {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
-    }
-    // Vertical
-    for (let x = 0; x < W; x += gs) {
-      const inLeftStrip = x < mapRect.x;
-      const inRightStrip = x > mapRect.x + mapRect.w;
-      if (!inLeftStrip && !inRightStrip) {
-        if (mapRect.y > 4) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapRect.y); ctx.stroke(); }
-        if (mapRect.y + mapRect.h < H - 4) { ctx.beginPath(); ctx.moveTo(x, mapRect.y + mapRect.h); ctx.lineTo(x, H); ctx.stroke(); }
-      } else {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      }
-    }
-    // Grid coordinate labels
-    ctx.fillStyle = GD + '0.12)';
-    ctx.font = '7px Share Tech Mono, monospace';
-    ctx.textAlign = 'left';
-    for (let x = 0; x < W; x += gs * 3) {
-      for (let y = 0; y < H; y += gs * 3) {
-        if (!isInMap(x, y, 20)) {
-          ctx.fillText(`${Math.floor(x/gs)},${Math.floor(y/gs)}`, x + 2, y + 8);
-        }
-      }
-    }
+    ctx.fillText('TACTICAL MAP // MASHMAK', mapRect.x, mapRect.y * 0.45);
+    ctx.fillStyle = 'rgba(255,215,0,0.2)';
+    ctx.textAlign = 'right';
+    ctx.fillText('SYS:ONLINE', mapRect.x + mapRect.w, mapRect.y * 0.45);
     ctx.restore();
   }
 
@@ -2894,42 +1752,13 @@ window.addEventListener('resize',()=>{
     if (!mapRect) { t += 0.016; requestAnimationFrame(draw); return; }
     ctx.clearRect(0, 0, W, H);
     t += 0.016;
-
-    drawTacticalGrid();
-    drawRoads();
-    drawBuildings();
-    drawVehicles();
-    drawSpace();
-    drawFloatRects();
-    drawCircuitTraces();
-    drawDataStreams();
-    drawAerialScanBeam();
-    drawAltRings();
-    drawDroneCamera();
-    drawPOIMarkers();
-    drawConcentrieArcs();
-    drawPercentageCircles();
-    drawEdgeUI();
+    drawDotGrid();
+    drawEdgeLines();
+    drawMapBrackets();
     drawScanLine();
-
+    drawLabel();
     requestAnimationFrame(draw);
   }
-
-  window.addEventListener('resize', () => setTimeout(() => {
-    buildDataStreams();
-    buildCity();
-    buildRoads();
-    buildVehicles();
-    buildPOIMarkers();
-  }, 150));
-  setTimeout(() => {
-    buildDataStreams();
-    buildCity();
-    buildRoads();
-    buildVehicles();
-    buildPOIMarkers();
-  }, 300);
-
   draw();
 })();
 document.querySelectorAll('.radio-list input[type="radio"]').forEach(radio => {
