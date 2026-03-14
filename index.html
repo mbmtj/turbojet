@@ -129,7 +129,7 @@ header.hud-header {
 .header-center .sub {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: rgba(0,255,255,0.4);
+  color: rgba(0,255,255,0.65);
   letter-spacing: 3px;
   margin-top: 3px;
 }
@@ -178,7 +178,7 @@ display: grid;
   border-bottom: 1px solid var(--border);
   font-size: 9px;
   letter-spacing: 3px;
-  color: rgba(0,255,255,0.4);
+  color: rgba(0,255,255,0.75);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -214,7 +214,7 @@ display: grid;
   font-family: var(--font-mono);
   cursor: pointer;
   gap: 10px;
-  color: rgba(0,255,255,0.5);
+  color: rgba(0,255,255,0.75);
   transition: all 0.2s;
   border-left: 2px solid transparent;
 }
@@ -228,7 +228,19 @@ display: grid;
 .radio-list input[type="radio"] {
   position: absolute;
   opacity: 0;
-  width: 0; height: 0;
+  width: 1px; height: 1px;
+  clip: rect(0,0,0,0);
+}
+/* Keyboard focus ring on label when radio is focused */
+.radio-list input[type="radio"]:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.radio-list label:focus-within {
+  color: var(--cyan);
+  background: rgba(0,255,255,0.08);
+  border-left-color: var(--cyan);
 }
 
 .radio-list input[type="radio"]:checked + span {
@@ -259,8 +271,8 @@ display: grid;
   padding: 8px 16px 4px;
   font-size: 8px;
   letter-spacing: 3px;
-  color: rgba(0,255,255,0.2);
-  border-top: 1px solid rgba(0,255,255,0.1);
+  color: rgba(0,255,255,0.55);
+  border-top: 1px solid rgba(0,255,255,0.15);
   margin-top: 4px;
 }
 
@@ -561,7 +573,7 @@ display: grid;
 .panel-section-title {
   font-size: 8px;
   letter-spacing: 3px;
-  color: rgba(0,255,255,0.3);
+  color: rgba(0,255,255,0.65);
   margin-bottom: 10px;
 }
 
@@ -572,7 +584,7 @@ display: grid;
   padding: 7px 8px;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: rgba(0,255,255,0.55);
+  color: rgba(0,255,255,0.8);
   text-decoration: none;
   border-radius: 4px;
   transition: all 0.2s;
@@ -1017,10 +1029,33 @@ footer.hud-footer {
 /* =============================================
    RESPONSIVE
 ============================================= */
-@media (max-width: 900px) {
+
+/* ── Tablet: 901px – 1100px ── */
+@media (max-width: 1100px) {
   main.hud-main {
-    grid-template-columns: 160px 1fr;
+    grid-template-columns: 180px 1fr 180px;
+  }
+}
+
+/* ── Small Tablet: 601px – 900px ── */
+@media (max-width: 900px) {
+  header.hud-header {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .header-right {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+  .header-center h1 { font-size: clamp(11px, 3vw, 16px); letter-spacing: 2px; }
+  .header-center .sub { font-size: 9px; letter-spacing: 2px; }
+
+  main.hud-main {
+    grid-template-columns: 150px 1fr;
     grid-template-rows: 1fr auto;
+    overflow: visible;
   }
   .right-panel {
     grid-column: 1 / -1;
@@ -1030,8 +1065,96 @@ footer.hud-footer {
     border-top: 1px solid var(--border);
     height: auto;
     max-height: none;
+    overflow-y: visible;
   }
   .panel-section { flex: 1; min-width: 140px; }
+  .left-panel { overflow-y: auto; max-height: calc(100vh - 140px); }
+}
+
+/* ── Mobile: ≤ 600px — single column stack ── */
+@media (max-width: 600px) {
+  header.hud-header {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .header-left { justify-content: center; }
+  .header-right { justify-content: center; }
+  .stat-chip { padding: 3px 8px; }
+  .stat-chip .label { font-size: 8px; }
+  .stat-chip .value { font-size: 11px; }
+  .header-center h1 { font-size: 12px; letter-spacing: 1px; }
+  .header-center .sub { display: none; }
+
+  main.hud-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  /* Left panel becomes a horizontal scrollable strip */
+  .left-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: none;
+    overflow-y: visible;
+  }
+  .radio-list {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .radio-list li { position: static; }
+  .radio-list label {
+    padding: 5px 10px;
+    font-size: 10px;
+    border-left: none;
+    border: 1px solid rgba(0,255,255,0.2);
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .radio-list label:hover { border-color: var(--cyan); }
+  .radio-list label:has(input:checked) {
+    border-color: var(--gold);
+    background: rgba(255,215,0,0.08);
+  }
+  .radio-list .section-divider {
+    width: 100%;
+    border-top: none;
+    padding: 6px 4px 2px;
+    font-size: 8px;
+  }
+
+  /* Map takes full width */
+  .map-area { padding: 8px; }
+
+  /* Right panel stacks below map */
+  .right-panel {
+    grid-column: 1;
+    flex-direction: column;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .panel-section { min-width: unset; }
+
+  /* Footer wraps */
+  footer.hud-footer {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 16px;
+    text-align: center;
+  }
+  .footer-left, .footer-center, .footer-right { text-align: center; }
+
+  /* Translate button full width pill on mobile */
+  #translate-btn-header {
+    display: flex !important;
+  }
 }
 
 .audio-player-container {
@@ -1205,6 +1328,10 @@ footer.hud-footer {
         <span class="label">BUILD</span>
         <span class="value">v2.3</span>
       </div>
+      <div class="stat-chip" style="background:rgba(0,255,100,0.07);border-color:rgba(0,255,100,0.4);">
+        <span class="label" style="color:rgba(0,255,100,0.6);">DISPLAY</span>
+        <span class="value" style="color:#00ff64;text-shadow:0 0 8px #00ff64,0 0 20px rgba(0,255,100,0.4);font-size:10px;letter-spacing:1px;">MOBILE FRIENDLY</span>
+      </div>
     </div>
 
     <div class="header-center">
@@ -1220,6 +1347,18 @@ footer.hud-footer {
       <div class="stat-chip">
         <span class="label">STATUS</span>
         <span class="value" style="color:#00ffff;text-shadow:0 0 8px #00ffff">ONLINE</span>
+      </div>
+      <!-- Language chip -->
+      <div style="position:relative;">
+        <button id="translate-btn-header"
+          aria-label="Select language"
+          class="stat-chip"
+          style="cursor:pointer; background:rgba(0,255,255,0.05); border:1px solid var(--border); transition:all 0.2s; text-align:center;"
+          onmouseover="this.style.background='rgba(0,255,255,0.12)';this.style.borderColor='var(--cyan)'"
+          onmouseout="this.style.background='rgba(0,255,255,0.05)';this.style.borderColor='var(--border)'">
+          <span class="label" style="opacity:1; color:rgba(0,255,255,0.85); letter-spacing:2px;">LANGUAGE</span>
+          <span class="value" id="translate-btn-header-label" style="color:#00ffff; text-shadow:0 0 8px #00ffff, 0 0 20px rgba(0,255,255,0.5); font-size:11px;">🌐 ENGLISH</span>
+        </button>
       </div>
     </div>
   </header>
@@ -1382,46 +1521,29 @@ footer.hud-footer {
           </label>
         </li>
 
-        <!-- ── TRANSLATION BUTTON ── -->
-        <li>
-          <div style="padding: 10px 16px 6px;">
-            <button id="translate-btn"
-              style="
-                width:100%; padding:7px 10px;
-                background: rgba(0,255,255,0.07);
-                border: 1px solid rgba(0,255,255,0.35);
-                border-radius:4px;
-                color: var(--cyan);
-                font-family: var(--font-mono);
-                font-size: 11px;
-                letter-spacing: 2px;
-                cursor: pointer;
-                display: flex; align-items: center; justify-content: center; gap: 8px;
-                transition: all 0.2s;
-                text-shadow: var(--glow-c);
-              "
-              onmouseover="this.style.background='rgba(0,255,255,0.14)';this.style.borderColor='var(--cyan)'"
-              onmouseout="this.style.background='rgba(0,255,255,0.07)';this.style.borderColor='rgba(0,255,255,0.35)'">
-              🌐 <span>TRANSLATE</span>
-            </button>
-            <div id="translate-panel" style="
-              display:none; margin-top:6px;
-              background: rgba(0,0,0,0.92);
-              border: 1px solid rgba(0,255,255,0.25);
-              border-radius:4px;
-              overflow:hidden;
-            ">
-              <div style="padding:6px 10px; font-size:8px; letter-spacing:3px; color:rgba(0,255,255,0.3); border-bottom:1px solid rgba(0,255,255,0.1);">SELECT LANGUAGE</div>
-              <div id="lang-list" style="max-height:180px; overflow-y:auto;"></div>
-            </div>
+        <li class="section-divider" style="width:100%;flex-basis:100%;">SETTINGS</li>
+        <audio id="myAudio" loop>
+          <source src="mp3/theme.mp3" type="audio/mpeg">
+        </audio>
+        <li style="padding:4px 16px;width:100%;flex-basis:100%;box-sizing:border-box;">
+          <button id="muteBtn" class="hud-btn">⏸ Mute</button>
+        </li>
+        <li style="padding:4px 16px 8px;width:100%;flex-basis:100%;box-sizing:border-box;">
+          <button id="translate-btn" class="hud-btn">
+            <span>TRANSLATE</span>
+          </button>
+          <div id="translate-panel" style="
+            display:none; margin-top:6px;
+            background: rgba(0,0,0,0.92);
+            border: 1px solid rgba(0,255,255,0.25);
+            border-radius:4px;
+            overflow:hidden;
+          ">
+            <div style="padding:6px 10px; font-size:8px; letter-spacing:3px; color:rgba(0,255,255,0.3); border-bottom:1px solid rgba(0,255,255,0.1);">SELECT LANGUAGE</div>
+            <div id="lang-list" style="max-height:180px; overflow-y:auto;"></div>
           </div>
         </li>
 
-        <li>
-          <div style="padding: 8px 16px;">
-            <img src="img/Codered.webp" alt="Code Red" style="width:100%; max-width:180px; display:block; border-radius:6px; filter:drop-shadow(0 0 8px rgba(255,215,0,0.8)) drop-shadow(0 0 20px rgba(255,215,0,0.5));">
-          </div>
-        </li>
       </ul>
     </aside>
     <!-- CENTER: MAP -->
@@ -1507,34 +1629,17 @@ footer.hud-footer {
       </div>
 
       <div class="panel-section">
-      <div class="panel-section-title">INTEL DATABASE</div>
-      <button class="hud-btn" id="open-table-btn">⊞ Mashmak Tips</button>
-<button class="hud-btn" id="open-verge-btn">⊞ Verge Tips</button>
-      </div>
-
-<div class="audio-player-container">
-    <audio id="cyberAudio" loop>
-    <source src="mp3/guide.mp3" type="audio/mpeg">
-    </audio>
-    <button id="cyberMuteBtn" class="hud-btn" type="button">
-    <span class="text">⊞ Start</span>
-    </button>
-</div>
-
-      <div class="panel-section">
-        <div class="panel-section-title">AUDIO</div>
-        <div class="audio-row">
-          <button id="muteBtn">⏸ Mute</button>
-        </div>
-        <audio id="myAudio" loop>
-          <source src="mp3/theme.mp3" type="audio/mpeg">
+        <div class="panel-section-title">INTEL DATABASE</div>
+        <button class="hud-btn" id="open-table-btn">⊞ Mashmak Tips</button>
+        <button class="hud-btn" id="open-verge-btn">⊞ Verge Tips</button>
+        <audio id="cyberAudio" loop>
+          <source src="mp3/guide.mp3" type="audio/mpeg">
         </audio>
-        <div style="margin-top:12px; text-align:center;">
-          <img src="img/Logo-Turbojet.webp" alt="Turbo Jet Logo"
-               style="width:100%; max-width:160px; height:auto; display:block; margin:0 auto;
-                      filter: drop-shadow(0 0 8px rgba(255,215,0,0.6)) drop-shadow(0 0 16px rgba(255,215,0,0.3));">
-        </div>
+        <button id="cyberMuteBtn" class="hud-btn" type="button">
+          <span class="text">⊞ Start</span>
+        </button>
       </div>
+
       <style>#app aside.right-panel > div.panel-section:last-of-type { border-bottom: none; }</style>
 
     </aside>
@@ -2629,7 +2734,7 @@ btnEl.addEventListener('click', () => {
   function shouldSkip(node) {
     let el = node.parentElement;
     while (el) {
-      if (el.id === 'counter' || el.id === 'translate-btn' || el.id === 'translate-panel' || el.id === 'lang-list') return true;
+      if (el.id === 'counter' || el.id === 'translate-btn' || el.id === 'translate-btn-header' || el.id === 'translate-panel' || el.id === 'lang-list') return true;
       el = el.parentElement;
     }
     return false;
@@ -2711,14 +2816,22 @@ btnEl.addEventListener('click', () => {
     langList.appendChild(btn);
   });
 
-  const panel = document.getElementById('translate-panel');
-  const tBtn  = document.getElementById('translate-btn');
+  // Both the left-panel button and the header button share the same dropdown
+  const panel      = document.getElementById('translate-panel');
+  const tBtn       = document.getElementById('translate-btn');        // left panel
+  const tBtnHeader = document.getElementById('translate-btn-header'); // header
 
-  tBtn.addEventListener('click', () => {
+  function openDropdown() {
     panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-  });
+  }
+  tBtn.addEventListener('click', openDropdown);
+  if (tBtnHeader) tBtnHeader.addEventListener('click', openDropdown);
+
   document.addEventListener('click', e => {
-    if (!tBtn.contains(e.target) && !panel.contains(e.target)) panel.style.display = 'none';
+    const clickedInsidePanel   = panel.contains(e.target);
+    const clickedLeftBtn       = tBtn.contains(e.target);
+    const clickedHeaderBtn     = tBtnHeader && tBtnHeader.contains(e.target);
+    if (!clickedInsidePanel && !clickedLeftBtn && !clickedHeaderBtn) panel.style.display = 'none';
   });
 
   function updateLangButtons(activeCode) {
@@ -2729,29 +2842,41 @@ btnEl.addEventListener('click', () => {
     });
   }
 
+  function setAllBtnLabels(text, isLoading) {
+    // Left panel button span
+    const leftSpan = tBtn.querySelector('span');
+    if (leftSpan) leftSpan.textContent = text;
+    // Header chip value span (keep LANGUAGE label intact)
+    const headerValue = document.getElementById('translate-btn-header-label');
+    if (headerValue) headerValue.textContent = isLoading ? '⟳ ' + text : '🌐 ' + text;
+  }
+
+  function setAllBtnsDisabled(disabled) {
+    tBtn.disabled = disabled;
+    tBtn.style.opacity = disabled ? '0.6' : '1';
+    if (tBtnHeader) { tBtnHeader.disabled = disabled; tBtnHeader.style.opacity = disabled ? '0.6' : '1'; }
+  }
+
   async function selectLang(code, label) {
     panel.style.display = 'none';
     currentLang = code;
     updateLangButtons(code);
-    const btnSpan = tBtn.querySelector('span');
     if (code === 'en') {
       ZONES.forEach(z => translateZone(z.key, z.selector, 'en'));
-      btnSpan.textContent = 'TRANSLATE';
+      setAllBtnLabels('ENGLISH', false);
       return;
     }
-    btnSpan.textContent = 'TRANSLATING...';
-    tBtn.disabled = true;
-    tBtn.style.opacity = '0.6';
+    setAllBtnLabels('TRANSLATING...', true);
+    setAllBtnsDisabled(true);
     try {
       await Promise.all(ZONES.map(z => translateZone(z.key, z.selector, code)));
       const langName = label.replace(/^[^\s]+\s*/, '').toUpperCase();
-      btnSpan.textContent = langName;
+      setAllBtnLabels(langName, false);
     } catch (err) {
       console.error('Translation error:', err);
-      btnSpan.textContent = 'ERROR — RETRY';
+      setAllBtnLabels('ERROR', false);
     }
-    tBtn.disabled = false;
-    tBtn.style.opacity = '1';
+    setAllBtnsDisabled(false);
   }
 
 })();
